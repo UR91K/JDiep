@@ -356,8 +356,6 @@ public abstract class Tank extends Entity {
         // Calculate rotation impact
         float rotationSpeed = (rotation - lastRotation) / deltaTime;
         float normalizedRotationSpeed = (float) Math.tanh(rotationSpeed * GameConstants.ROTATION_SPEED_SCALE);
-
-        // Determine rotation direction
         boolean isClockwise = rotationSpeed > 0;
 
         float totalMoment = GameConstants.calculateMomentOfInertia(turretWidth, turretLength, bodyRadius);
@@ -365,6 +363,7 @@ public abstract class Tank extends Entity {
 
         Vector2f pushOffForce = new Vector2f();
         boolean collision = false;
+        float pushAngle = 0.0f;  // Moved outside if blocks
 
         // Right wall collision
         if (maxX > GameConstants.BOUNDARY_RIGHT) {
@@ -373,9 +372,8 @@ public abstract class Tank extends Entity {
             float leverageRatio = (1.0f + Math.abs(impactPoint.y - pos.y) / turretLength)
                     * GameConstants.LEVERAGE_MULTIPLIER;
 
-            // Push perpendicular to wall, modified by rotation direction
-            float baseAngle = (float)Math.PI/2; // Points up
-            float pushAngle = isClockwise ? baseAngle : -baseAngle;
+            // For right wall: clockwise -> down, counterclockwise -> up
+            pushAngle = isClockwise ? -(float)Math.PI/2 : (float)Math.PI/2;
 
             addPushForce(pushOffForce, pushAngle, basePushForce * leverageRatio);
             pos.x = GameConstants.BOUNDARY_RIGHT - (maxX - pos.x);
@@ -387,8 +385,8 @@ public abstract class Tank extends Entity {
             float leverageRatio = (1.0f + Math.abs(impactPoint.y - pos.y) / turretLength)
                     * GameConstants.LEVERAGE_MULTIPLIER;
 
-            float baseAngle = (float)Math.PI/2; // Points up
-            float pushAngle = isClockwise ? -baseAngle : baseAngle;
+            // For left wall: clockwise -> up, counterclockwise -> down
+            pushAngle = isClockwise ? (float)Math.PI/2 : -(float)Math.PI/2;
 
             addPushForce(pushOffForce, pushAngle, basePushForce * leverageRatio);
             pos.x = GameConstants.BOUNDARY_LEFT + (pos.x - minX);
@@ -401,8 +399,8 @@ public abstract class Tank extends Entity {
             float leverageRatio = (1.0f + Math.abs(impactPoint.x - pos.x) / turretLength)
                     * GameConstants.LEVERAGE_MULTIPLIER;
 
-            float baseAngle = 0; // Points right
-            float pushAngle = isClockwise ? -baseAngle : baseAngle;
+            // For top wall: clockwise -> right, counterclockwise -> left
+            pushAngle = isClockwise ? 0 : (float)Math.PI;  // INVERTED THIS LINE
 
             addPushForce(pushOffForce, pushAngle, basePushForce * leverageRatio);
             pos.y = GameConstants.BOUNDARY_TOP - (maxY - pos.y);
@@ -414,8 +412,8 @@ public abstract class Tank extends Entity {
             float leverageRatio = (1.0f + Math.abs(impactPoint.x - pos.x) / turretLength)
                     * GameConstants.LEVERAGE_MULTIPLIER;
 
-            float baseAngle = 0; // Points right
-            float pushAngle = isClockwise ? baseAngle : -baseAngle;
+            // For bottom wall: clockwise -> left, counterclockwise -> right
+            pushAngle = isClockwise ? (float)Math.PI : 0;  // INVERTED THIS LINE
 
             addPushForce(pushOffForce, pushAngle, basePushForce * leverageRatio);
             pos.y = GameConstants.BOUNDARY_BOTTOM + (pos.y - minY);
@@ -438,10 +436,14 @@ public abstract class Tank extends Entity {
             // Combine forces
             pushOffForce.add(normalForce);
 
-            // Apply final scaling
             float massScale = GameConstants.MASS_SCALE / (getMass() + 1.0f);
             pushOffForce.mul(massScale * GameConstants.DAMPING_FACTOR);
             vel.add(pushOffForce);
+
+            // Debug output
+            System.out.println("Wall collision - Rotation: " + (isClockwise ? "Clockwise" : "Counter-clockwise") +
+                    " Push angle: " + Math.toDegrees(pushAngle) +
+                    " Force: " + pushOffForce);
         }
 
         lastRotation = rotation;

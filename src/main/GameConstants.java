@@ -48,7 +48,7 @@ public final class GameConstants {
     public static final float DEFAULT_VIEW_SIZE = 30.0f;
 
     // Visual constants
-    public static final Vector4f GRID_COLOR = rgb(35, 35, 35);
+    public static final Vector4f GRID_COLOR = rgb(38, 38, 38);
     public static final Vector4f CLEAR_COLOR = rgb(24, 24, 24);
 
     public static final float CLEAR_COLOR_R = CLEAR_COLOR.x;
