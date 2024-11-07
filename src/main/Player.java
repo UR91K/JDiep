@@ -2,8 +2,6 @@ package main;
 
 import org.joml.Vector2f;
 
-import static org.lwjgl.opengl.GL20.glVertexAttribPointer;
-
 public class Player extends Tank {
     public Player(Vector2f startPos) {
         super(startPos,

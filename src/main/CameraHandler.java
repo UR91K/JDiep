@@ -58,9 +58,15 @@ class CameraHandler {
     }
 
     public Matrix4f getViewMatrix() {
+        // To zoom around the camera target (player):
+        // 1. Translate to origin
+        // 2. Apply zoom
+        // 3. Translate back
         return new Matrix4f()
-                .translate(-position.x, -position.y, 0.0f)
-                .scale(zoomLevel);
+                .translate(-position.x, -position.y, 0.0f)            // Move to origin
+                .translate(position.x, position.y, 0.0f)             // Move back to position
+                .scale(zoomLevel)                                    // Apply zoom
+                .translate(-position.x, -position.y, 0.0f);          // Apply camera offset
     }
 
     public void setZoom(float zoom) {

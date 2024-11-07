@@ -17,13 +17,14 @@ public class DebugMenu {
     // Menu layout
     private static final float LINE_HEIGHT = 20.0f;
     private static final float MENU_X = 10.0f;
-    private static final float MENU_Y = 10.0f;
+    private static final float MENU_Y = 25.0f;
     private static final float SECTION_SPACING = 20.0f;
     private static final float SLIDER_WIDTH = 150.0f;
     private static final float SLIDER_HEIGHT = 4.0f;
     private static final float HANDLE_WIDTH = 8.0f;
     private static final float HANDLE_HEIGHT = 16.0f;
     private static final float SLIDER_VERTICAL_OFFSET = 5.0f;
+
 
     // Menu sections vertical positions
     private float currentY = MENU_Y;
@@ -32,12 +33,12 @@ public class DebugMenu {
     private String activeSlider = null;
     private float sliderGrabOffset = 0;
 
-    public DebugMenu(Player player, CameraHandler camera) {
+    public DebugMenu(Player player, CameraHandler camera, TextRenderer textRenderer) {
         System.out.println("Debug Menu initialized"); // Debug print
         this.player = player;
         this.camera = camera;
         this.shader = new ShaderHandler();
-        this.textRenderer = new TextRenderer("fonts/vcr_osd_mono.ttf");
+        this.textRenderer = textRenderer;  // Use the provided textRenderer instead of creating new one
         updateProjection(1280, 720); // Default size, will be updated when window resizes
     }
 
@@ -167,8 +168,6 @@ public class DebugMenu {
         return min + t * (max - min);
     }
 
-
-
     private void renderText(String text, float x, float y, Vector4f color) {
         textRenderer.renderText(orthoMatrix, text, x, y, color);
     }
@@ -194,7 +193,6 @@ public class DebugMenu {
     // Make sure to add cleanup
     public void cleanup() {
         if (shader != null) shader.cleanup();
-        if (textRenderer != null) textRenderer.cleanup();
     }
 
     public void updateSliders(Vector2f mousePos) {

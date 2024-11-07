@@ -14,39 +14,70 @@ public class InputHandler {
     private Player player;
     private CameraHandler camera;
     private DebugMenu debugMenu;
+    private CommandLine commandLine;
     private Vector2f mouseScreenPos = new Vector2f();
     private Vector2f mouseWorldPos = new Vector2f();
     private GLFWKeyCallback keyCallback;
 
     public InputHandler(long window, Player player, CameraHandler camera) {
-        System.out.println("InputHandler initialized"); // Debug print
+        System.out.println("InputHandler initialized");
         this.window = window;
         this.player = player;
         this.camera = camera;
 
         // Set up scroll callback for zoom
         glfwSetScrollCallback(window, (win, xoffset, yoffset) -> {
+            if (commandLine != null && commandLine.isVisible()) return;
             float zoomFactor = (float) Math.pow(1.1, yoffset);
             camera.adjustZoom(zoomFactor);
         });
 
         // Set up keyboard input handler
         glfwSetKeyCallback(window, (win, key, scancode, action, mods) -> {
-            System.out.println("Key event received - Key: " + key + ", Action: " + action); // Debug print
+            // Only handle key press events, not repeats or releases
+            if (action != GLFW_PRESS) {
+                return;
+            }
 
-            if (key == GLFW_KEY_F3 && action == GLFW_PRESS) {
-                System.out.println("F3 pressed"); // Debug print
+            System.out.println("Key pressed: " + key);
+
+            // F3 for debug menu always works
+            if (key == GLFW_KEY_F3) {
                 if (debugMenu != null) {
-                    System.out.println("Debug menu exists, toggling..."); // Debug print
                     debugMenu.toggleVisibility();
-                } else {
-                    System.out.println("Debug menu is null!"); // Debug print
                 }
+                return;
+            }
+
+            // If command line is visible, send all key input to it
+            if (commandLine != null && commandLine.isVisible()) {
+                commandLine.handleKeyInput(key, action);
+                return;
+            }
+
+            // Handle slash key to open command line
+            if (key == GLFW_KEY_SLASH) {
+                System.out.println("Slash key pressed, opening command line");
+                if (commandLine != null && !commandLine.isVisible()) {
+                    commandLine.toggleVisibility();
+                }
+                return;
+            }
+        });
+
+        // Set up character callback for command line text input
+        glfwSetCharCallback(window, (win, codepoint) -> {
+            if (commandLine != null && commandLine.isVisible()) {
+                System.out.println("Character input: " + (char)codepoint); // Debug print
+                commandLine.handleCharInput((char)codepoint);
             }
         });
     }
 
     public void processMousePosition(CameraHandler camera, int windowWidth, int windowHeight) {
+        // If command line is visible, don't process mouse
+        if (commandLine != null && commandLine.isVisible()) return;
+
         try (MemoryStack stack = MemoryStack.stackPush()) {
             DoubleBuffer xpos = stack.mallocDouble(1);
             DoubleBuffer ypos = stack.mallocDouble(1);
@@ -55,7 +86,7 @@ public class InputHandler {
             glfwGetCursorPos(window, xpos, ypos);
 
             // Store the screen coordinates first
-            float screenX = (float)xpos.get(0);  // Use get(0) to read from the start
+            float screenX = (float)xpos.get(0);
             float screenY = (float)ypos.get(0);
             mouseScreenPos.set(screenX, screenY);
 
@@ -74,61 +105,38 @@ public class InputHandler {
         }
     }
 
-    // Method to add debug menu after it's created
+    public Vector2f processInput() {
+        // If command line is visible, return zero movement
+        if (commandLine != null && commandLine.isVisible()) {
+            return new Vector2f(0, 0);
+        }
+
+        Vector2f moveDir = new Vector2f(0, 0);
+
+        // Only process movement keys if command line is not visible
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) moveDir.y += 1;
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) moveDir.y -= 1;
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) moveDir.x -= 1;
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) moveDir.x += 1;
+
+        // Sprint modifier
+        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+            moveDir.mul(2.0f);
+        }
+
+        if (moveDir.lengthSquared() > 0) {
+            moveDir.normalize();
+        }
+
+        return moveDir;
+    }
 
     public void setDebugMenu(DebugMenu debugMenu) {
-        System.out.println("Setting debug menu"); // Debug print
         this.debugMenu = debugMenu;
     }
 
-    private Vector2f processMovementInput() {
-        Vector2f moveDir = new Vector2f(0, 0);
-
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) moveDir.y += 1;
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) moveDir.y -= 1;
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) moveDir.x -= 1;
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) moveDir.x += 1;
-
-        // Sprint modifier
-        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-            moveDir.mul(2.0f);
-        }
-
-        if (moveDir.lengthSquared() > 0) {
-            moveDir.normalize();
-        }
-
-        return moveDir;
-    }
-
-    public Vector2f processInput() {
-        Vector2f moveDir = new Vector2f(0, 0);
-
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) moveDir.y += 1;
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) moveDir.y -= 1;
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) moveDir.x -= 1;
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) moveDir.x += 1;
-
-        // Sprint modifier
-        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-            moveDir.mul(2.0f);
-        }
-
-        if (moveDir.lengthSquared() > 0) {
-            moveDir.normalize();
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_PRESS) {
-            System.out.println("F3 detected in processInput()"); // Debug print
-        }
-
-        return moveDir;
-    }
-
-    private void processDebugMenuInput(boolean mousePressed, boolean mouseDown) {
-        if (mousePressed || mouseDown) {
-            debugMenu.updateSliders(mouseScreenPos);
-        }
+    public void setCommandLine(CommandLine commandLine) {
+        this.commandLine = commandLine;
     }
 
     public Vector2f getMouseWorldPos() {

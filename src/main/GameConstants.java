@@ -73,6 +73,8 @@ public final class GameConstants {
     // Default player turret dimensions
     public static final float PLAYER_TURRET_WIDTH = 2.0f;
     public static final float PLAYER_TURRET_LENGTH = 3.0f;
+    public static final float TURRET_PUSH_FORCE = 4.0f;
+
 
     // Debug Menu colors
     public static final Vector4f DEBUG_MENU_TEXT_COLOR = new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
@@ -80,6 +82,25 @@ public final class GameConstants {
     public static final Vector4f DEBUG_MENU_SECTION_COLOR = new Vector4f(0.5f, 1.0f, 0.5f, 1.0f);
     public static final Vector4f DEBUG_MENU_SLIDER_TRACK_COLOR = new Vector4f(0.3f, 0.3f, 0.3f, 1.0f);
     public static final Vector4f DEBUG_MENU_SLIDER_HANDLE_COLOR = new Vector4f(0.8f, 0.8f, 0.8f, 1.0f);
+
+
+    // Physics constants for turret collisions - revised for stability
+    public static final float ROTATION_SPEED_SCALE = 0.1f;
+    public static final float BASE_FORCE_MULTIPLIER = 20.0f;
+    public static final float LEVERAGE_MULTIPLIER = 1.2f;
+    public static final float MASS_SCALE = 1.0f;
+    public static final float DAMPING_FACTOR = 0.8f;
+    public static final float MOMENT_OF_INERTIA_SCALE = 0.2f;
+    public static final float NORMAL_FORCE_RATIO = 0.5f;
+    public static final float TANGENTIAL_FORCE_RATIO = 1.0f;
+
+    // Helper method for moment of inertia calculations
+    public static float calculateMomentOfInertia(float width, float length, float radius) {
+        float turretMoment = (width * length * length) / 6.0f;
+        float bodyMoment = radius * radius;
+        return (turretMoment + bodyMoment) * MOMENT_OF_INERTIA_SCALE;
+    }
+
 
     public static Vector4f rgb(int r, int g, int b) {
         float normalizedR = r / 255.0f;

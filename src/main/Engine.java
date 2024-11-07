@@ -19,9 +19,8 @@ public class Engine {
     private long window;
     private static int width = 1280;
     private static int height = 720;
-
-    private static final float WORLD_SIZE = 500.0f; // Half the total size (1000x1000 total)
-    private static final float GRID_SPACING = 2.0f; // Space between grid lines
+    private float aspectRatio = (float) width / height;
+    private static final float BASE_VIEW_HEIGHT = GameConstants.DEFAULT_VIEW_SIZE * 2;
 
     private Player player;
     private InputHandler inputHandler;
@@ -30,11 +29,14 @@ public class Engine {
     private float deltaTime;
     private float lastFrame;
     private DebugMenu debugMenu;
+    private CommandLine commandLine;
+    private TextRenderer textRenderer;
     private int gridVertexCount;
     private int gridVAO;
     private Matrix4f projectionMatrix;
 
     private GLFWErrorCallback errorCallback;
+    private GLFWWindowSizeCallback windowSizeCallback;
 
     public void init() {
         // Set up error callback first
@@ -49,13 +51,38 @@ public class Engine {
         // Configure GLFW
         glfwDefaultWindowHints();
         glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-        glfwWindowHint(GLFW_RESIZABLE, 1);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
         // Create window
         window = glfwCreateWindow(width, height, "2D Game", NULL, NULL);
         if (window == NULL) {
             throw new RuntimeException("Failed to create window");
         }
+
+        // Set up resize callback
+        windowSizeCallback = new GLFWWindowSizeCallback() {
+            @Override
+            public void invoke(long window, int newWidth, int newHeight) {
+                width = newWidth;
+                height = newHeight;
+                aspectRatio = (float) width / height;
+
+                // Update viewport
+                glViewport(0, 0, width, height);
+
+                // Update projection matrix
+                updateProjectionMatrix();
+
+                // Update UI components
+                if (debugMenu != null) {
+                    debugMenu.updateProjection(width, height);
+                }
+                if (commandLine != null) {
+                    commandLine.updateProjection(width, height);
+                }
+            }
+        };
+        glfwSetWindowSizeCallback(window, windowSizeCallback);
 
         // Center window
         GLFWVidMode vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
@@ -82,10 +109,17 @@ public class Engine {
         player = new Player(new Vector2f(0, 0));
         camera = new CameraHandler(player.getPosition());
         inputHandler = new InputHandler(window, player, camera);
-        debugMenu = new DebugMenu(player, camera);
 
-        // Add debug menu to input handler after creation
+        // Create shared text renderer
+        textRenderer = new TextRenderer("fonts/vcr_osd_mono.ttf");
+
+        // Create debug components
+        debugMenu = new DebugMenu(player, camera, textRenderer);
+        commandLine = new CommandLine(player, textRenderer);
+
+        // Add debug components to input handler
         inputHandler.setDebugMenu(debugMenu);
+        inputHandler.setCommandLine(commandLine);
 
         // Update projection and create grid with new scale
         updateProjectionMatrix();
@@ -93,13 +127,15 @@ public class Engine {
     }
 
     private void updateProjectionMatrix() {
-        float aspectRatio = (float) width / height;
+        // Calculate view width based on the fixed view height and current aspect ratio
+        float viewWidth = BASE_VIEW_HEIGHT * aspectRatio;
 
+        // Create orthographic projection that maintains consistent height
         projectionMatrix = new Matrix4f().ortho(
-                -GameConstants.DEFAULT_VIEW_SIZE * aspectRatio,
-                GameConstants.DEFAULT_VIEW_SIZE * aspectRatio,
-                -GameConstants.DEFAULT_VIEW_SIZE,
-                GameConstants.DEFAULT_VIEW_SIZE,
+                -viewWidth / 2,
+                viewWidth / 2,
+                -BASE_VIEW_HEIGHT / 2,
+                BASE_VIEW_HEIGHT / 2,
                 -1.0f, 1.0f
         );
     }
@@ -155,8 +191,9 @@ public class Engine {
 
             // Update
             player.updateRotation(inputHandler.getMouseWorldPos());
-            player.update(moveDir, deltaTime);
-            camera.update(player.getPosition(), deltaTime);
+            player.updateMovement(moveDir, deltaTime);
+            player.update(deltaTime);  // This deltaTime propagates through the update chain
+            camera.update(player.position, deltaTime);
 
             // Render
             render();
@@ -185,17 +222,22 @@ public class Engine {
         // Render player
         player.render(shaderHandler, viewProjectionMatrix);
 
+        // Enable blending for UI elements
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
         // 2. Render UI (Debug Menu)
         if (debugMenu != null && debugMenu.isVisible()) {
-            // Enable blending for UI
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
             debugMenu.render(width, height);
-
-            // Restore blend state
-            glDisable(GL_BLEND);
         }
+
+        // 3. Render Command Line
+        if (commandLine != null && commandLine.isVisible()) {
+            commandLine.render(width, height);
+        }
+
+        // Disable blending
+        glDisable(GL_BLEND);
     }
 
     public void run() {
@@ -212,6 +254,8 @@ public class Engine {
         if (player != null) player.cleanup();
         if (shaderHandler != null) shaderHandler.cleanup();
         if (inputHandler != null) inputHandler.cleanup();
+        if (textRenderer != null) textRenderer.cleanup();
+        if (windowSizeCallback != null) windowSizeCallback.free();
 
         // Clean up GLFW
         glfwFreeCallbacks(window);
@@ -224,14 +268,16 @@ public class Engine {
         }
     }
 
-
-
     public static int getWindowWidth() {
         return width;
     }
 
     public static int getWindowHeight() {
         return height;
+    }
+
+    public static float getAspectRatio() {
+        return (float) width / height;
     }
 
     public static void main(String[] args) {
