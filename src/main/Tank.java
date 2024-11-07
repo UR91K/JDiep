@@ -2,6 +2,7 @@ package main;
 
 import org.joml.Matrix4f;
 import org.joml.Vector2f;
+import org.joml.Vector4f;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.*;
@@ -33,8 +34,15 @@ public abstract class Tank extends Entity {
     protected float friction;
     protected float bounceFactor;
 
+    protected String nameTag;
+    protected static final Vector4f NAME_TAG_COLOR = new Vector4f(1.0f, 1.0f, 1.0f, 0.9f);
+    protected static final float NAME_TAG_OFFSET_Y = -8.0f;
+    protected static final float NAME_TAG_SCALE = 0.08f;
+    protected TextRenderer textRenderer;
+
+
     public Tank(Vector2f position, float radius, float turretWidth, float turretLength) {
-        super(position, radius); // Initial mass equals radius for compatibility
+        super(position, radius);
         setType(EntityType.TANK);
 
         // Initialize dimensions
@@ -48,6 +56,9 @@ public abstract class Tank extends Entity {
 
         // Create rendering meshes
         createMeshes();
+
+        // Default name tag to empty
+        this.nameTag = "";
     }
 
     protected void updateMassScaling() {
@@ -188,7 +199,45 @@ public abstract class Tank extends Entity {
         shader.setUniform("model", bodyModel);
         renderBody(shader);
 
+        // Render name tag if set
+        renderNameTag(viewProjectionMatrix);
+
         glLineWidth(1.0f);
+    }
+
+    protected void renderNameTag(Matrix4f viewProjectionMatrix) {
+        if (nameTag != null && !nameTag.isEmpty() && textRenderer != null) {
+            // Enable blending for text
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+            float textWidth = textRenderer.getTextWidth(nameTag) * NAME_TAG_SCALE;
+            float textHeight = textRenderer.getLineHeight() * NAME_TAG_SCALE;
+
+            // Position above tank
+            float yPos = position.y + (bodyRadius + NAME_TAG_OFFSET_Y);
+            float xPos = position.x;
+
+            // Create projection matrix for text
+            Matrix4f textProjection = new Matrix4f(viewProjectionMatrix)
+                    .translate(xPos, yPos, 0)      // Move to position
+                    .scale(NAME_TAG_SCALE, -NAME_TAG_SCALE, 1.0f);  // Scale and flip Y
+
+            // Center the text by offsetting by half its width
+            float xOffset = -textWidth / (2 * NAME_TAG_SCALE);
+
+            // Render text
+            textRenderer.renderText(
+                    textProjection,
+                    nameTag,
+                    xOffset,
+                    0,
+                    NAME_TAG_COLOR
+            );
+
+            // Restore GL state
+            glDisable(GL_BLEND);
+        }
     }
 
     protected void renderTurret(ShaderHandler shader) {
@@ -434,4 +483,17 @@ public abstract class Tank extends Entity {
     public float getTurretWidth() { return turretWidth; }
     public float getTurretLength() { return turretLength; }
     public float getBodyRadius() { return bodyRadius; }
+    // Add setter for text renderer
+    public void setTextRenderer(TextRenderer textRenderer) {
+        this.textRenderer = textRenderer;
+    }
+
+    // Add getter/setter for name tag
+    public void setNameTag(String nameTag) {
+        this.nameTag = nameTag;
+    }
+
+    public String getNameTag() {
+        return nameTag;
+    }
 }

@@ -86,13 +86,13 @@ public final class GameConstants {
 
     // Physics constants for turret collisions - revised for stability
     public static final float ROTATION_SPEED_SCALE = 0.1f;
-    public static final float BASE_FORCE_MULTIPLIER = 20.0f;
+    public static final float BASE_FORCE_MULTIPLIER = 17.0f;
     public static final float LEVERAGE_MULTIPLIER = 1.2f;
     public static final float MASS_SCALE = 1.0f;
     public static final float DAMPING_FACTOR = 0.8f;
     public static final float MOMENT_OF_INERTIA_SCALE = 0.2f;
-    public static final float NORMAL_FORCE_RATIO = 0.5f;
-    public static final float TANGENTIAL_FORCE_RATIO = 1.0f;
+    public static final float NORMAL_FORCE_RATIO = 0.9f;
+    public static final float TANGENTIAL_FORCE_RATIO = 0.6f;
 
     // Helper method for moment of inertia calculations
     public static float calculateMomentOfInertia(float width, float length, float radius) {

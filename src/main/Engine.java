@@ -23,6 +23,7 @@ public class Engine {
     private static final float BASE_VIEW_HEIGHT = GameConstants.DEFAULT_VIEW_SIZE * 2;
 
     private Player player;
+    private EntityManager entityManager;
     private InputHandler inputHandler;
     private ShaderHandler shaderHandler;
     private CameraHandler camera;
@@ -106,16 +107,22 @@ public class Engine {
 
         // Initialize components
         shaderHandler = new ShaderHandler();
+        entityManager = new EntityManager();
+
+        // Create player and add to entity manager
         player = new Player(new Vector2f(0, 0));
+        entityManager.addEntity(player);
+
         camera = new CameraHandler(player.getPosition());
         inputHandler = new InputHandler(window, player, camera);
 
-        // Create shared text renderer
+        // Create shared text renderer and set it in entity manager
         textRenderer = new TextRenderer("fonts/vcr_osd_mono.ttf");
+        entityManager.setTextRenderer(textRenderer);
 
-        // Create debug components
+        // Create debug components with entity manager reference
         debugMenu = new DebugMenu(player, camera, textRenderer);
-        commandLine = new CommandLine(player, textRenderer);
+        commandLine = new CommandLine(player, textRenderer, entityManager);
 
         // Add debug components to input handler
         inputHandler.setDebugMenu(debugMenu);
@@ -192,7 +199,10 @@ public class Engine {
             // Update
             player.updateRotation(inputHandler.getMouseWorldPos());
             player.updateMovement(moveDir, deltaTime);
-            player.update(deltaTime);  // This deltaTime propagates through the update chain
+
+            // Update all entities through entity manager
+            entityManager.update(deltaTime);
+
             camera.update(player.position, deltaTime);
 
             // Render
@@ -219,8 +229,12 @@ public class Engine {
         glBindVertexArray(gridVAO);
         glDrawArrays(GL_LINES, 0, gridVertexCount);
 
-        // Render player
-        player.render(shaderHandler, viewProjectionMatrix);
+        // Render all entities
+        for (Entity entity : entityManager.getAllEntities()) {
+            if (entity instanceof Tank) {
+                ((Tank) entity).render(shaderHandler, viewProjectionMatrix);
+            }
+        }
 
         // Enable blending for UI elements
         glEnable(GL_BLEND);
@@ -251,7 +265,14 @@ public class Engine {
 
     private void cleanup() {
         if (debugMenu != null) debugMenu.cleanup();
-        if (player != null) player.cleanup();
+        if (entityManager != null) {
+            // Cleanup all entities
+            for (Entity entity : entityManager.getAllEntities()) {
+                if (entity instanceof Tank) {
+                    ((Tank) entity).cleanup();
+                }
+            }
+        }
         if (shaderHandler != null) shaderHandler.cleanup();
         if (inputHandler != null) inputHandler.cleanup();
         if (textRenderer != null) textRenderer.cleanup();

@@ -33,7 +33,8 @@ public class DebugMenu {
     private String activeSlider = null;
     private float sliderGrabOffset = 0;
 
-    public DebugMenu(Player player, CameraHandler camera, TextRenderer textRenderer) {
+    public DebugMenu(Player player, CameraHandler camera,
+                     TextRenderer textRenderer) {
         System.out.println("Debug Menu initialized"); // Debug print
         this.player = player;
         this.camera = camera;

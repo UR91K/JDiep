@@ -17,6 +17,7 @@ public class CommandLine {
     private int historyIndex = -1;
     private final TextRenderer textRenderer;
     private final Player player;
+    private final EntityManager entityManager;
     private final Vector4f commandLineColor = new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
     private final Vector4f backgroundColor = new Vector4f(0.0f, 0.0f, 0.0f, 0.7f);
     private final float COMMAND_LINE_HEIGHT = 20.0f;
@@ -27,6 +28,7 @@ public class CommandLine {
     private boolean showCursor = true;
     private Matrix4f orthoMatrix;
 
+
     private Map<String, CommandExecutor> commands = new HashMap<>();
 
     @FunctionalInterface
@@ -34,9 +36,10 @@ public class CommandLine {
         void execute(String[] args);
     }
 
-    public CommandLine(Player player, TextRenderer textRenderer) {
+    public CommandLine(Player player, TextRenderer textRenderer, EntityManager entityManager) {
         this.player = player;
         this.textRenderer = textRenderer;
+        this.entityManager = entityManager;
 
         // Initialize projection matrix with default window size
         updateProjection(Engine.getWindowWidth(), Engine.getWindowHeight());
@@ -70,6 +73,50 @@ public class CommandLine {
                 player.setMass(mass);
             } catch (NumberFormatException e) {
                 System.out.println("Invalid mass value");
+            }
+        });
+
+        commands.put("spawn", args -> {
+            if (args.length == 0) {
+                System.out.println("Usage: /spawn <type> <x> <y>");
+                System.out.println("Available types: dummy");
+                return;
+            }
+
+            if (args[0].equals("help")) {
+                System.out.println("Spawn command usage:");
+                System.out.println("/spawn dummy <x> <y> - Spawns a dummy tank at specified coordinates");
+                System.out.println("Example: /spawn dummy 100 100");
+                return;
+            }
+
+            String type = args[0].toLowerCase();
+            if (type.equals("dummy")) {
+                if (args.length != 3) {
+                    System.out.println("Usage: /spawn dummy <x> <y>");
+                    return;
+                }
+
+                try {
+                    float x = Float.parseFloat(args[1]);
+                    float y = Float.parseFloat(args[2]);
+
+                    // Check world bounds
+                    if (x < GameConstants.BOUNDARY_LEFT || x > GameConstants.BOUNDARY_RIGHT ||
+                            y < GameConstants.BOUNDARY_BOTTOM || y > GameConstants.BOUNDARY_TOP) {
+                        System.out.println("Position out of world bounds");
+                        return;
+                    }
+
+                    Vector2f spawnPos = new Vector2f(x, y);
+                    DummyTank dummy = entityManager.createDummyTank(spawnPos);
+                    System.out.println("Spawned dummy tank " + dummy.getDummyId() + " at (" + x + ", " + y + ")");
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid coordinates. Usage: /spawn dummy <x> <y>");
+                }
+            } else {
+                System.out.println("Unknown entity type: " + type);
+                System.out.println("Available types: dummy");
             }
         });
     }
