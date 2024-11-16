@@ -1,3 +1,6 @@
+//Tank.java
+//LEGACY IMPLEMENTATION
+//USE THIS FOR REFERENCE
 package main;
 
 import org.joml.Matrix4f;
@@ -14,6 +17,7 @@ public abstract class Tank extends Entity {
     // Rendering meshes
     protected int circleVAO;
     protected int turretVAO;
+
 
     // Tank body properties
     protected float bodyRadius;  // Current scaled radius for body collision and rendering

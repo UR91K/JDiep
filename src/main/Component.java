@@ -1,3 +1,6 @@
+//Component.java
+//LEGACY IMPLEMENTATION
+//USE THIS FOR REFERENCE
 package main;
 
 public abstract class Component {

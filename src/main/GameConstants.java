@@ -1,3 +1,6 @@
+//GameConstants.java
+//LEGACY IMPLEMENTATION
+//USE THIS FOR REFERENCE
 package main;
 
 import org.joml.Vector4f;
