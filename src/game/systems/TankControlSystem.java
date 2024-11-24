@@ -21,61 +21,28 @@ public class TankControlSystem extends System {
                 RigidBodyComponent.class
         );
 
-        logger.debug("Found {} entities with required components", entities.size());
-
         for (Entity entity : entities) {
-            if (!(entity instanceof BaseTank)) {
-                logger.warn("Entity {} has control components but is not a BaseTank",
-                        entity.getClass().getSimpleName());
-                continue;
-            }
-
             BaseTank tank = (BaseTank)entity;
             LocalPlayerControlComponent control = entity.getComponent(LocalPlayerControlComponent.class);
             MovementComponent movement = entity.getComponent(MovementComponent.class);
 
-            logger.debug("PRE-MOVEMENT - Tank position in transform: {}, in rigidbody: {}",
-                    tank.getComponent(Transform2DComponent.class).getPosition(),
-                    tank.getComponent(RigidBodyComponent.class).getPosition());
-
-            if (!control.isEnabled()) {
-                logger.trace("Control disabled for tank: {}", tank.getClass().getSimpleName());
-                continue;
-            }
-
-            // Process input
+            // Process input and get move direction
             control.processInput();
             var moveDir = control.getMoveDirection();
 
-            // Apply movement through tank
-            if (moveDir.lengthSquared() > 0) {
-                logger.debug("Applying tank movement - Direction: {}, Speed: {}",
-                        moveDir, movement.getMoveSpeed());
-
-                // Use tank's movement method instead of direct force application
-                tank.applyMovement(moveDir);
-
-                // Log movement state
-                RigidBodyComponent body = tank.getComponent(RigidBodyComponent.class);
-                logger.debug("Post movement state - Velocity: {}, Force: {}",
-                        body.getVelocity(), body.getAccumulatedForce());
-            }
-
-            // Update rotation
-            float targetRotation = control.getTargetRotation();
-            float currentRotation = tank.getTurretRotation();
-            if (Math.abs(targetRotation - currentRotation) > 0.01f) {
-                logger.trace("Updating turret rotation from {} to {}",
-                        currentRotation, targetRotation);
-                tank.setTargetTurretRotation(targetRotation);
-            }
-
+            // IMPORTANT: Clear the movement force if no input
             if (moveDir.lengthSquared() > 0) {
                 tank.applyMovement(moveDir);
-                logger.debug("POST-MOVEMENT - Tank position in transform: {}, in rigidbody: {}",
-                        tank.getComponent(Transform2DComponent.class).getPosition(),
-                        tank.getComponent(RigidBodyComponent.class).getPosition());
+            } else {
+                // Reset movement when no input
+                movement.setDesiredForce(new Vector2f());
             }
+
+            // Log movement state
+            logger.debug("Tank movement state - moveDir: {}, vel: {}, force: {}",
+                    moveDir,
+                    tank.getComponent(RigidBodyComponent.class).getVelocity(),
+                    movement.getCurrentForce());
         }
     }
 

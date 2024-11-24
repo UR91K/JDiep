@@ -8,7 +8,7 @@ public class MovementComponent extends Component {
     private static final Logger logger = Logger.getLogger(MovementComponent.class);
 
     private Vector2f velocity = new Vector2f();
-    private Vector2f currentForce = new Vector2f();  // New field to store desired force
+    private Vector2f currentForce = new Vector2f();
     private float moveSpeed;
     private float friction;
     private float mass;
@@ -66,8 +66,13 @@ public class MovementComponent extends Component {
     }
 
     public void setDesiredForce(Vector2f force) {
-        logger.trace("Setting desired force: {} (previous: {})", force, currentForce);
+        logger.trace("Setting desired force from {} to {}", currentForce, force);
         currentForce.set(force);
+    }
+
+    // Add method to clear forces
+    public void clearForces() {
+        currentForce.zero();
     }
 
     public Vector2f getCurrentForce() {

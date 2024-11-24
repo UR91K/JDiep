@@ -93,29 +93,11 @@ public class PhysicsSystem extends System {
             RigidBodyComponent body = entity.getComponent(RigidBodyComponent.class);
             Transform2DComponent transform = entity.getComponent(Transform2DComponent.class);
 
-            // Log pre-integration state
-            logger.debug("Pre-integration {} - pos: {}, vel: {}, force: {}",
-                    entity.getClass().getSimpleName(),
-                    body.getPosition(),
-                    body.getVelocity(),
-                    body.getAccumulatedForce());
-
-            // Integrate
             body.integrate(dt);
-
-            // CRITICAL: This is where we sync transform with physics
             transform.setPosition(body.getPosition());
 
-            // If this is a tank, update its internal state
-            if (entity instanceof BaseTank) {
-                ((BaseTank) entity).update(dt);
-            }
-
-            // Log post-integration state
-            logger.debug("Post-integration {} - pos: {}, vel: {}",
-                    entity.getClass().getSimpleName(),
-                    body.getPosition(),
-                    body.getVelocity());
+            logger.debug("Post-integration state - pos: {}, vel: {}, force: {}",
+                    body.getPosition(), body.getVelocity(), body.getAccumulatedForce());
         }
     }
 
@@ -188,23 +170,26 @@ public class PhysicsSystem extends System {
                 RigidBodyComponent.class
         );
 
-        logger.debug("Updating control forces for {} entities", controlledEntities.size());
-
         for (Entity entity : controlledEntities) {
             MovementComponent movement = entity.getComponent(MovementComponent.class);
             RigidBodyComponent body = entity.getComponent(RigidBodyComponent.class);
 
+            // Apply current movement force
             Vector2f force = movement.getCurrentForce();
-            logger.trace("Entity {}: current force={}",
-                    entity.getClass().getSimpleName(), force);
-
             if (force.lengthSquared() > 0) {
-                logger.debug("Applying control force {} to {}",
+                logger.debug("Applying movement force {} to {}",
                         force, entity.getClass().getSimpleName());
                 body.applyForce(force);
+            }
 
-                logger.debug("Post-force state: vel={}, accumulatedForce={}",
-                        body.getVelocity(), body.getAccumulatedForce());
+            // Add damping force to slow down when no input
+            Vector2f velocity = body.getVelocity();
+            if (velocity.lengthSquared() > 0) {
+                float dampingCoeff = 3.0f; // Adjust this value to control how quickly it stops
+                Vector2f dampingForce = new Vector2f(velocity).mul(-dampingCoeff * body.getMass());
+                body.applyForce(dampingForce);
+                logger.debug("Applied damping force {} to velocity {}",
+                        dampingForce, velocity);
             }
         }
     }

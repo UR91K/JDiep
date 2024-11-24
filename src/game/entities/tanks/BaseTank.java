@@ -25,9 +25,10 @@ public abstract class BaseTank extends Entity {
     protected final PolygonShape turretShape;
 
     protected float targetTurretRotation = 0.0f;
-    protected final TankStats stats;
     private float currentTurretRotation = 0.0f; // Track actual rotation
+    protected final TankStats stats;
     private Vector2f lastPhysicsPosition = new Vector2f();
+
 
     protected BaseTank(Vector2f position, TankStats stats) {
         this.stats = stats;
@@ -129,27 +130,29 @@ public abstract class BaseTank extends Entity {
         float angleDiff = getShortestAngleDifference(currentTurretRotation, targetTurretRotation);
 
         if (Math.abs(angleDiff) > 0.001f) {
+            logger.trace("Turret rotation - current: {}, target: {}, diff: {}",
+                    currentTurretRotation, targetTurretRotation, angleDiff);
+
             // Spring-damper model for turret rotation
             float springTorque = stats.turretSpringStiffness * angleDiff;
             float dampingTorque = -stats.turretDamping * turretRigidbody.getAngularVelocity();
             float totalTorque = springTorque + dampingTorque;
 
             // Clamp torque
-            totalTorque = Math.max(-stats.turretMaxTorque, Math.min(totalTorque, stats.turretMaxTorque));
+            totalTorque = Math.max(-stats.turretMaxTorque,
+                    Math.min(totalTorque, stats.turretMaxTorque));
 
-            // Apply rotation
-            float rotationDelta = totalTorque * deltaTime;
-            currentTurretRotation += rotationDelta;
+            // Apply torque to turret rigidbody
+            turretRigidbody.applyTorque(totalTorque);
+
+            // Update current rotation from physics
+            currentTurretRotation = turretRigidbody.getRotation();
 
             // Normalize rotation to [0, 2π]
             currentTurretRotation = normalizeAngle(currentTurretRotation);
 
-            // Update physics and shape
-            turretRigidbody.setRotation(currentTurretRotation);
-            turretShape.rotate(currentTurretRotation);
-
-            logger.trace("Turret update - current: {}, target: {}, delta: {}, torque: {}",
-                    currentTurretRotation, targetTurretRotation, rotationDelta, totalTorque);
+            logger.trace("Applied torque: {}, new rotation: {}",
+                    totalTorque, currentTurretRotation);
         }
     }
 

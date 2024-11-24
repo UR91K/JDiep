@@ -49,18 +49,6 @@ public class RigidBodyComponent extends Component {
     }
 
     /**
-     * Applies a torque (rotational force) to the body.
-     * This will be accumulated and applied during integration.
-     *
-     * @param torque The amount of torque to apply
-     */
-    public void applyTorque(float torque) {
-        if (!isStatic) {
-            accumulatedTorque += torque;
-        }
-    }
-
-    /**
      * Applies a force to the center of mass
      */
     public void applyForce(Vector2f force) {
@@ -102,25 +90,33 @@ public class RigidBodyComponent extends Component {
         if (isStatic) return;
         integrating = true;
 
-        logger.trace("Starting integration with dt={}, accumulated force={}", dt, accumulatedForce);
+        try {
+            // Store current state
+            lastPosition.set(position);
+            lastRotation = rotation;
 
-        // Store current position for next frame
-        lastPosition.set(position);
-        lastRotation = rotation;
+            // Update linear motion
+            acceleration.set(accumulatedForce).mul(inverseMass);
+            velocity.add(new Vector2f(acceleration).mul(dt));
+            position.add(new Vector2f(velocity).mul(dt));
 
-        // Update velocity based on force
-        acceleration.set(accumulatedForce).mul(inverseMass);
-        velocity.add(new Vector2f(acceleration).mul(dt));
+            // Update angular motion
+            if (accumulatedTorque != 0) {
+                angularAcceleration = accumulatedTorque * inverseMomentOfInertia;
+                angularVelocity += angularAcceleration * dt;
+                rotation += angularVelocity * dt;
+                rotation = normalizeAngle(rotation);  // Keep rotation in [0, 2π]
 
-        // Update position based on new velocity
-        position.add(new Vector2f(velocity).mul(dt));
+                logger.trace("Angular integration - torque: {}, vel: {}, rot: {}",
+                        accumulatedTorque, angularVelocity, rotation);
+            }
 
-        // Clear forces AFTER integration
-        accumulatedForce.zero();
-        accumulatedTorque = 0;
-
-        integrating = false;
-        logger.trace("Finished integration, new position: {}, new velocity: {}", position, velocity);
+            // Clear accumulated forces and torques
+            accumulatedForce.zero();
+            accumulatedTorque = 0;
+        } finally {
+            integrating = false;
+        }
     }
 
     /**
@@ -189,18 +185,14 @@ public class RigidBodyComponent extends Component {
         this.velocity.set(velocity);
     }
 
-    public float getRotation() {
-        return rotation;
-    }
+
 
     public void setRotation(float rotation) {
         this.rotation = rotation;
         this.lastRotation = rotation;
     }
 
-    public float getAngularVelocity() {
-        return angularVelocity;
-    }
+
 
     public void setAngularVelocity(float angularVelocity) {
         this.angularVelocity = angularVelocity;
@@ -247,5 +239,25 @@ public class RigidBodyComponent extends Component {
             return new Vector2f(position);  // Return copy if not in collision resolution
         }
         return position;
+    }
+
+
+
+
+    public void applyTorque(float torque) {
+        if (!isStatic) {
+            accumulatedTorque += torque;
+            logger.trace("Applied torque: {}, total torque: {}",
+                    torque, accumulatedTorque);
+        }
+    }
+
+    public float getRotation() { return rotation; }
+    public float getAngularVelocity() { return angularVelocity; }
+
+    private float normalizeAngle(float angle) {
+        while (angle < 0) angle += 2 * Math.PI;
+        while (angle >= 2 * Math.PI) angle -= 2 * Math.PI;
+        return angle;
     }
 }

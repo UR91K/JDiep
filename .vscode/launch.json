@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Launch JDiep",
+            "request": "launch",
+            "mainClass": "game.JDiep",
+            "vmArgs": "-XX:-UseGCLogFileRotation",
+            "sourcePaths": [
+                "${workspaceFolder}/build/classes",
+                "${workspaceFolder}/lib/*"
+            ]
+        }
+    ]
+} 
